@@ -79,7 +79,7 @@ This case study contains 3 datasets and they are as follows:
 
 # Tech Stack
 
-Tool– MySQL will be used for:
+Tool– MySQL was used for:
 
 A. For performing mathematical operations over data
 
