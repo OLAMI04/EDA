@@ -136,6 +136,130 @@ HAVING AVG(Inventory_Quantity) > (
 ````
 ![image](https://github.com/user-attachments/assets/d840befc-9632-49cc-be42-b0c1b7ed1961)
 
+#### Calculate stockout frequency for high demand products
+````sql
+Select 
+s.Product_ID,
+Count(*) as stockout_Frequency
+From sales_data s
+Where s.Product_ID IN (Select Product_ID FROM sales_data)
+AND s.Inventory_Quantity = 0
+GROUP BY s.Product_ID;
+````
+![image](https://github.com/user-attachments/assets/c194f8fc-214f-4932-ac24-b9fa6eba19ee)
+
+#### INFLUENCE OF EXTERNAL DATA
+### GDP
+````sql
+SELECT 
+    Product_ID,
+    AVG(CASE WHEN `GDP` > 0 THEN Inventory_Quantity ELSE NULL END) AS avg_sales_positives_gdp,
+    AVG(CASE WHEN `GDP` <= 0 THEN Inventory_Quantity ELSE NULL END) AS avg_sales_non_positives_gdp
+FROM 
+    sales_data s
+    join external_factors e
+    on 
+    s.Sales_Date = e.Sales_Date
+GROUP BY  
+    Product_ID
+HAVING 
+    AVG(CASE WHEN `GDP` > 0 THEN Inventory_Quantity ELSE NULL END) IS NOT NULL;
+````
+![image](https://github.com/user-attachments/assets/243635e3-1e90-4fba-8a6f-edefeda0f433)
+
+#### INFLATION
+````sql
+SELECT 
+    Product_ID,
+    AVG(CASE WHEN Inflation_Rate > 0 THEN Inventory_Quantity ELSE NULL END) AS avg_sales_positives_inflation,
+    AVG(CASE WHEN Inflation_Rate <= 0 THEN Inventory_Quantity ELSE NULL END) AS avg_sales_non_positives_inflation
+FROM 
+    sales_data s
+    join external_factors e
+    on 
+    s.Sales_Date = e.Sales_Date
+GROUP BY  
+    Product_ID
+HAVING 
+    AVG(CASE WHEN Inflation_Rate > 0 THEN Inventory_Quantity ELSE NULL END) IS NOT NULL;
+````
+![image](https://github.com/user-attachments/assets/4e77adcb-05bd-4b43-981b-b46791ad9f43)
+
+## Optimizing Inventory
+### Determine the optimal reorder points for each product base on historical sales data and external factors
+### Reorder point = lead time Demands + Safety Stock
+````sql
+With InventoryCalculations AS (
+	SElECT Product_ID,
+    AVG(rolling_avg_sales) AS rolling_avg_sales,
+    AVG(rolling_avg_variance) AS rolling_avg_variance
+From (
+SElECT Product_ID,
+AVG(daily_sales) OVER (PARTITION BY Product_ID ORDER BY Sales_Date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS rolling_avg_sales,
+AVG(Squared_diff) OVER (PARTITION BY Product_ID ORDER BY Sales_Date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS rolling_avg_variance  
+From (
+SElECT Product_ID,
+ Sales_Date, Inventory_Quantity * Product_Cost As daily_sales,
+ (Inventory_Quantity * Product_Cost - AVG(Inventory_Quantity * Product_Cost) OVER (PARTITION BY Product_ID ORDER BY Sales_Date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW))
+*(Inventory_Quantity * Product_Cost - AVG(Inventory_Quantity * Product_Cost) OVER (PARTITION BY Product_ID ORDER BY Sales_Date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)) as Squared_diff
+ From inventory_data
+ ) subquery
+  ) subquery2
+ Group by Product_ID
+)
+ Select Product_ID,
+ rolling_avg_sales * 7 as lead_time_demands,
+ 1.645 * (rolling_avg_variance* 7) as safety_stock,
+ (rolling_avg_variance * 7) + (1.645 * (rolling_avg_variance * 7)) as reorder_point
+ From InventoryCalculations;
+````
+![image](https://github.com/user-attachments/assets/0da9091d-6756-4fd8-b9c7-dbd04960bdb1)
+
+ #### Create Inventory Optimization Table
+ ````sql
+ Create Table inventory_optimization (
+	Product_ID INT,
+    Reorder_point DOUBLE
+    );
+````
+#### Overstocking and Understocking
+````sql
+With Rollingsales AS (
+Select Product_ID,
+Sales_Date,
+ AVG(Inventory_Quantity * Product_Cost) OVER (PARTITION BY Product_ID ORDER BY Sales_Date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) As rolling_avg_sales    
+ From
+ Inventory_table
+ ), 
+ -- Calculate the number of days a product was out of stock
+ Stockoutdays AS (
+ Select Product_ID, 
+ Count(*) As stockout_days
+ From inventory_table
+ Where Inventory_Quantity = 0
+ Group by Product_ID
+ )
+ -- Join the above CTEs with the main table to get the results
+ Select f.Product_ID,
+ AVG(f.Inventory_Quantity * f.Product_Cost) as avg_inventory_value,
+ AVG(rs.rolling_avg_sales) as avg_rolling_sales,
+ COALESCE(sd.stockout_days, 0) as stockout_days
+ from inventory_table f
+ Join rollingsales rs on f.Product_ID = rs.Product_ID AND f.Sales_Date = rs.Sales_Date
+ Left join StockoutDays sd on f.Product_ID = sd.Product_ID
+ Group By f.Product_ID, sd.Stockout_days;
+````
+![image](https://github.com/user-attachments/assets/46413b09-4456-4c34-b829-a36da2655f03)
+
+
+
+
+
+
+
+
+
+
 
 
 
