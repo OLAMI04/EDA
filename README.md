@@ -103,3 +103,6 @@ Project Scope
     H. Data Visualization: Create visual representations to communicate insights effectively.
      
     I. Interpretation and Insight Generation: Extract meaningful insights and interpret the results.
+
+   ### Dataset
+   [Sales_Dataset](https://github.com/OLAMI04/Revolutionize-Supply-Chain-with-SQL/blob/main/Dataset/Sales%20data%20(2).csv)
