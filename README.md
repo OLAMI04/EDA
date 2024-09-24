@@ -108,3 +108,5 @@ Project Scope
    [Sales_Dataset](https://github.com/OLAMI04/Revolutionize-Supply-Chain-with-SQL/blob/main/Dataset/Sales%20data%20(2).csv)
    
    [Product_Dataset](https://github.com/OLAMI04/Revolutionize-Supply-Chain-with-SQL/blob/main/Dataset/Product_Information%20(2).csv)
+
+   [Inventory_Dataset](https://github.com/OLAMI04/Revolutionize-Supply-Chain-with-SQL/blob/main/Dataset/Inventory_data%20(2).csv)
